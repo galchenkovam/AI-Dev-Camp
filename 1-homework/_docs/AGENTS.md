@@ -6,11 +6,16 @@ Commands
 
 Documents
 
-- `_docs/process.md` - how work is organized
-- Before writing tests, read `_docs/testing-guidelines.md`
-- For anything touching the UI, read `_docs/design-system.md`
+- `_docs/plan.md` - product requirements and scope
+- `_docs/tasks.md` - backlog of GitHub issues
+- `_docs/process.md` - workflow and execution rules
 
 Rules
 
+- Work on one GitHub issue at a time.
+- Read the task description and acceptance criteria before starting work.
+- Commit regularly and only after a task is finished.
 - Dependencies are added in `pyproject.toml`. Do not add one without
-  asking
+  asking.
+- If a task affects the product direction, check `_docs/plan.md` before
+  making changes.
