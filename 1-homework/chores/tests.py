@@ -46,6 +46,16 @@ class AuthenticationTest(TestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, "A user with that username already exists.")
 
+	def test_registration_rejects_mismatched_passwords(self):
+		response = self.client.post(
+			reverse("register"),
+			{"username": "alice", "password1": "A-strong-password-123", "password2": "Different-password-123"},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "The two password fields")
+		self.assertFalse(get_user_model().objects.filter(username="alice").exists())
+
 	def test_user_can_login_stay_authenticated_and_logout(self):
 		get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
 
@@ -75,6 +85,13 @@ class HouseholdTest(TestCase):
 		self.assertTrue(HouseholdMember.objects.filter(household=household, user=self.user).exists())
 		self.assertEqual(len(str(household.invite_token)), 36)
 		self.assertCountEqual(household.categories.values_list("name", flat=True), ["Kitchen", "Laundry", "Cleaning", "Other"])
+
+	def test_anonymous_user_is_redirected_from_household_creation(self):
+		self.client.logout()
+
+		response = self.client.get(reverse("household-create"))
+
+		self.assertRedirects(response, f"{reverse('login')}?next={reverse('household-create')}")
 
 	def test_each_household_gets_a_unique_invite_token(self):
 		first = Household.objects.create(name="First", created_by=self.user)
@@ -118,6 +135,18 @@ class HouseholdTest(TestCase):
 
 		self.assertRedirects(response, reverse("household-detail", args=[household.id]))
 		self.assertTrue(Category.objects.filter(household=household, name="Garden").exists())
+
+	def test_non_member_cannot_create_category(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+		self.client.force_login(self.other_user)
+
+		response = self.client.post(
+			reverse("category-create", args=[household.id]),
+			{"name": "Garden", "color": "#123456", "icon": "leaf"},
+		)
+
+		self.assertEqual(response.status_code, 404)
+		self.assertFalse(Category.objects.filter(household=household, name="Garden").exists())
 
 	def test_chore_defaults_and_supported_choices_are_explicit(self):
 		household = Household.objects.create(name="Maple House", created_by=self.user)
@@ -212,6 +241,30 @@ class ChoreCrudTest(TestCase):
 		self.assertRedirects(response, reverse("chore-list", args=[self.household.id]))
 		self.assertFalse(Chore.objects.filter(id=chore.id).exists())
 
+	def test_member_can_assign_chore_to_another_household_member(self):
+		HouseholdMember.objects.create(household=self.household, user=self.other_user)
+
+		response = self.client.post(
+			reverse("chore-create", args=[self.household.id]),
+			{**self.chore_data(), "assigned_to": self.other_user.id},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(Chore.objects.get(title="Wash dishes").assigned_to, self.other_user)
+
+	def test_chore_form_rejects_category_from_another_household(self):
+		other_household = Household.objects.create(name="Other House", created_by=self.other_user)
+		other_category = Category.objects.create(household=other_household, name="Laundry")
+
+		response = self.client.post(
+			reverse("chore-create", args=[self.household.id]),
+			{**self.chore_data(), "category": other_category.id},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Select a valid choice")
+		self.assertFalse(Chore.objects.filter(title="Wash dishes").exists())
+
 	def test_non_member_cannot_access_chore_crud(self):
 		chore = Chore.objects.create(
 			household=self.household,
@@ -245,6 +298,18 @@ class ChoreCrudTest(TestCase):
 		self.client.post(reverse("chore-claim", args=[self.household.id, chore.id]))
 		chore.refresh_from_db()
 		self.assertEqual(chore.assigned_to, self.user)
+
+	def test_claimable_chore_is_not_claimed_by_a_get_request(self):
+		chore = Chore.objects.create(
+			household=self.household, category=self.category, title="Take bins out", created_by=self.user,
+			assignment_mode=Chore.AssignmentMode.CLAIM,
+		)
+
+		response = self.client.get(reverse("chore-claim", args=[self.household.id, chore.id]))
+
+		self.assertRedirects(response, reverse("chore-detail", args=[self.household.id, chore.id]))
+		chore.refresh_from_db()
+		self.assertIsNone(chore.assigned_to)
 
 	def test_rotation_assigns_members_in_join_order(self):
 		HouseholdMember.objects.create(household=self.household, user=self.other_user)
@@ -302,10 +367,19 @@ class CompletionTest(TestCase):
 		member.refresh_from_db()
 		self.assertEqual(member.points, 25)
 
+	def test_completing_one_time_chore_does_not_create_another_chore(self):
+		self.chore.recurrence = Chore.Recurrence.NONE
+		self.chore.save(update_fields=("recurrence",))
+
+		self.client.post(reverse("chore-complete", args=[self.household.id, self.chore.id]))
+
+		self.assertEqual(Chore.objects.filter(title=self.chore.title).count(), 1)
+
 
 class ChoreFilterTest(TestCase):
 	def setUp(self):
 		self.user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		self.other_user = get_user_model().objects.create_user(username="bob", password="A-strong-password-123")
 		self.household = Household.objects.create(name="Maple House", created_by=self.user)
 		HouseholdMember.objects.create(household=self.household, user=self.user)
 		self.category = Category.objects.create(household=self.household, name="Kitchen")
@@ -319,6 +393,22 @@ class ChoreFilterTest(TestCase):
 
 		self.assertContains(response, "Wash dishes")
 		self.assertNotContains(response, "Fold clothes")
+
+	def test_assignee_filter_returns_only_matching_chores(self):
+		HouseholdMember.objects.create(household=self.household, user=self.other_user)
+		self.first.assigned_to = self.other_user
+		self.first.save(update_fields=("assigned_to",))
+		other = Chore.objects.create(
+			household=self.household, category=self.other_category, title="Empty bins", created_by=self.user,
+			assigned_to=self.user,
+		)
+
+		response = self.client.get(
+			reverse("chore-list", args=[self.household.id]), {"assigned_to": self.other_user.id}
+		)
+
+		self.assertContains(response, "Wash dishes")
+		self.assertNotContains(response, other.title)
 
 
 class CalendarTest(TestCase):
@@ -335,4 +425,23 @@ class CalendarTest(TestCase):
 		self.assertContains(response, "September 2026")
 		self.assertContains(response, reverse("chore-detail", args=[household.id, chore.id]))
 		self.assertContains(response, "month=10")
+
+	def test_calendar_december_navigation_includes_following_year(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=user)
+		HouseholdMember.objects.create(household=household, user=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 12})
+
+		self.assertEqual(response.context["following"], date(2027, 1, 1))
+
+	def test_non_member_cannot_view_calendar(self):
+		owner = get_user_model().objects.create_user(username="owner", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=owner)
+		self.client.force_login(get_user_model().objects.create_user(username="visitor", password="A-strong-password-123"))
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]))
+
+		self.assertEqual(response.status_code, 404)
 
