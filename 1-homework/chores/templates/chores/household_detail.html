@@ -17,7 +17,7 @@
     <h2>Categories</h2>
     <ul>
         {% for category in household.categories.all %}
-            <li>{{ category.name }}</li>
+            <li><span class="category-label" style="--category-color: {{ category.color }}">{% if category.icon %}{{ category.icon }} {% endif %}{{ category.name }}</span></li>
         {% endfor %}
     </ul>
     <p><a href="{% url 'category-create' household.id %}">Create a category</a></p>

@@ -41,7 +41,7 @@
     </div>
     <ul>
         {% for chore in chores %}
-            <li><a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a> - {{ chore.category.name }}, {{ chore.due_date|default:"No due date" }}, {{ chore.get_priority_display }}, {{ chore.estimated_minutes|default:"Not estimated" }} minutes, {{ chore.assigned_to.username|default:"Unclaimed" }}, {{ chore.get_status_display }}</li>
+            <li><a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a> - <span class="category-label" style="--category-color: {{ chore.category.color }}">{% if chore.category.icon %}{{ chore.category.icon }} {% endif %}{{ chore.category.name }}</span>, {{ chore.due_date|default:"No due date" }}, {{ chore.get_priority_display }}, {{ chore.estimated_minutes|default:"Not estimated" }} minutes, {{ chore.assigned_to.username|default:"Unclaimed" }}, {{ chore.get_status_display }}</li>
         {% empty %}
             <li>No chores yet.</li>
         {% endfor %}

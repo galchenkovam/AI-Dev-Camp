@@ -5,7 +5,7 @@
     <h1>{{ chore.title }}</h1>
     <p>{{ chore.description }}</p>
     <dl>
-        <dt>Category</dt><dd>{{ chore.category.name }}</dd>
+        <dt>Category</dt><dd><span class="category-label" style="--category-color: {{ chore.category.color }}">{% if chore.category.icon %}{{ chore.category.icon }} {% endif %}{{ chore.category.name }}</span></dd>
         <dt>Due date</dt><dd>{{ chore.due_date|default:"No due date" }}</dd>
         <dt>Priority</dt><dd>{{ chore.get_priority_display }}</dd>
         <dt>Estimated time</dt><dd>{{ chore.estimated_minutes|default:"Not estimated" }} minutes</dd>

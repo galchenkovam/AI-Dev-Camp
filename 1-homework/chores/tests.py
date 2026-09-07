@@ -230,6 +230,7 @@ class ChoreCrudTest(TestCase):
 		self.assertContains(self.client.get(reverse("chore-list", args=[self.household.id])), "Wash dishes")
 		detail = self.client.get(reverse("chore-detail", args=[self.household.id, chore.id]))
 		self.assertContains(detail, "Kitchen")
+		self.assertContains(detail, "--category-color: #6c757d")
 		self.assertContains(detail, "High")
 		self.assertContains(detail, "20 minutes")
 
