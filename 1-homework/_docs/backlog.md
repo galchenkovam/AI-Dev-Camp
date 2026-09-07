@@ -1,5 +1,7 @@
 # Backlog
 
+Before implementation, the PM must groom each task using [task-template.md](task-template.md) and the role guidance in [team/pm.md](team/pm.md). The groomed task must define its goal, acceptance criteria, out-of-scope work, and constraints.
+
 ## 1. Set up empty Django project with passing test and database connection
 Goal: Establish the base project skeleton, connect it to the database, and verify the environment is working.
 Description: Create the initial Django project and app structure, configure the database connection, add the minimum configuration, and write a simple test that confirms the app loads, the database connects, and the test runner passes. This task should leave the project in a clean starting state for the next tasks without introducing feature logic.

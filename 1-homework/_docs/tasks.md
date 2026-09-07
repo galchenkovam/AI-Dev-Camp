@@ -1,6 +1,6 @@
 # Implementation Tasks
 
-These tasks are the issue-ready breakdown for the backlog. Complete them in order; each task should be implemented and tested before the next one begins.
+These tasks are the issue-ready breakdown for the backlog. The PM must groom each task using [task-template.md](task-template.md) and [team/pm.md](team/pm.md) before implementation starts. Complete tasks in order; each task should be implemented and tested before the next one begins.
 
 ## 1. Set up empty Django project with passing test and database connection
 **Goal:** Establish the base project skeleton, connect it to the database, and verify the environment is working.
