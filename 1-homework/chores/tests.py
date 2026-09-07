@@ -56,6 +56,28 @@ class AuthenticationTest(TestCase):
 		self.assertContains(response, "The two password fields")
 		self.assertFalse(get_user_model().objects.filter(username="alice").exists())
 
+	def test_registration_rejects_missing_required_fields_with_warning_popup(self):
+		response = self.client.post(
+			reverse("register"),
+			{"username": "", "password1": "", "password2": ""},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "This field is required.")
+		self.assertContains(response, "window.alert")
+		self.assertContains(response, "Please fix these problems")
+
+	def test_registration_rejects_password_that_breaks_displayed_requirements(self):
+		response = self.client.post(
+			reverse("register"),
+			{"username": "alice", "password1": "short", "password2": "short"},
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "This password is too short.")
+		self.assertContains(response, "window.alert")
+		self.assertFalse(get_user_model().objects.filter(username="alice").exists())
+
 	def test_user_can_login_stay_authenticated_and_logout(self):
 		get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
 
@@ -471,6 +493,16 @@ class CalendarTest(TestCase):
 		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 12})
 
 		self.assertEqual(response.context["following"], date(2027, 1, 1))
+
+	def test_calendar_shows_empty_state_when_month_has_no_chores(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=user)
+		HouseholdMember.objects.create(household=household, user=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 9})
+
+		self.assertContains(response, "No chores are scheduled for this month.")
 
 	def test_non_member_cannot_view_calendar(self):
 		owner = get_user_model().objects.create_user(username="owner", password="A-strong-password-123")
