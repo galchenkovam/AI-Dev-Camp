@@ -7,30 +7,30 @@
         <label>Status
             <select name="status">
                 <option value="">Any</option>
-                <option value="todo">To do</option>
-                <option value="in_progress">In progress</option>
-                <option value="done">Done</option>
+                <option value="todo"{% if filters.status == "todo" %} selected{% endif %}>To do</option>
+                <option value="in_progress"{% if filters.status == "in_progress" %} selected{% endif %}>In progress</option>
+                <option value="done"{% if filters.status == "done" %} selected{% endif %}>Done</option>
             </select>
         </label>
         <label>Category
             <select name="category">
                 <option value="">Any</option>
-                {% for category in household.categories.all %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}
+                {% for category in household.categories.all %}<option value="{{ category.id }}"{% if filters.category == category.id|stringformat:"s" %} selected{% endif %}>{{ category.name }}</option>{% endfor %}
             </select>
         </label>
         <label>Assignee
             <select name="assigned_to">
                 <option value="">Any</option>
-                {% for member in household.members.all %}<option value="{{ member.user.id }}">{{ member.user.username }}</option>{% endfor %}
+                {% for member in household.members.all %}<option value="{{ member.user.id }}"{% if filters.assigned_to == member.user.id|stringformat:"s" %} selected{% endif %}>{{ member.user.username }}</option>{% endfor %}
             </select>
         </label>
         <label>Priority
             <select name="priority">
                 <option value="">Any</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
+                <option value="low"{% if filters.priority == "low" %} selected{% endif %}>Low</option>
+                <option value="medium"{% if filters.priority == "medium" %} selected{% endif %}>Medium</option>
+                <option value="high"{% if filters.priority == "high" %} selected{% endif %}>High</option>
+                <option value="urgent"{% if filters.priority == "urgent" %} selected{% endif %}>Urgent</option>
             </select>
         </label>
         <button type="submit">Filter</button>
@@ -41,7 +41,7 @@
     </div>
     <ul>
         {% for chore in chores %}
-            <li><a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a> - {{ chore.category.name }}, {{ chore.due_date|default:"No due date" }}, {{ chore.get_priority_display }}, {{ chore.assigned_to.username|default:"Unclaimed" }}, {{ chore.get_status_display }}</li>
+            <li><a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a> - {{ chore.category.name }}, {{ chore.due_date|default:"No due date" }}, {{ chore.get_priority_display }}, {{ chore.estimated_minutes|default:"Not estimated" }} minutes, {{ chore.assigned_to.username|default:"Unclaimed" }}, {{ chore.get_status_display }}</li>
         {% empty %}
             <li>No chores yet.</li>
         {% endfor %}

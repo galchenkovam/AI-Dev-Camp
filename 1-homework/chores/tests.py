@@ -426,6 +426,8 @@ class ChoreFilterTest(TestCase):
 
 		self.assertContains(response, "Wash dishes")
 		self.assertNotContains(response, "Fold clothes")
+		self.assertContains(response, f'<option value="{self.category.id}" selected>Kitchen</option>', html=True)
+		self.assertContains(response, '<option value="high" selected>High</option>', html=True)
 
 	def test_assignee_filter_returns_only_matching_chores(self):
 		HouseholdMember.objects.create(household=self.household, user=self.other_user)

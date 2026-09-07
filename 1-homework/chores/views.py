@@ -108,7 +108,7 @@ def chore_list(request, household_id):
 		chores = chores.filter(assigned_to_id=filters["assigned_to"])
 	if filters["priority"]:
 		chores = chores.filter(priority=filters["priority"])
-	return render(request, "chores/chore_list.html", {"household": household, "chores": chores})
+	return render(request, "chores/chore_list.html", {"household": household, "chores": chores, "filters": filters})
 
 
 @login_required

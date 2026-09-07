@@ -11,6 +11,7 @@
         <dt>Estimated time</dt><dd>{{ chore.estimated_minutes|default:"Not estimated" }} minutes</dd>
         <dt>Status</dt><dd>{{ chore.get_status_display }}</dd>
         <dt>Assignee</dt><dd>{{ chore.assigned_to.username|default:"Unclaimed" }}</dd>
+        <dt>Points</dt><dd>{{ chore.points }}</dd>
     </dl>
     <div class="row">
         <a href="{% url 'chore-edit' household.id chore.id %}">Edit</a>
@@ -32,7 +33,7 @@
             <button type="submit">Mark complete</button>
         </form>
     {% else %}
-        <p>Completed by {{ chore.completed_by.username }}.</p>
+        <p>Completed by {{ chore.completed_by.username }} at {{ chore.completed_at|date:"Y-m-d H:i" }}.</p>
     {% endif %}
 </div>
 {% endblock %}
