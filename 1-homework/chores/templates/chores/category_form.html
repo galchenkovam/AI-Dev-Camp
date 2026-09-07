@@ -1,15 +1,12 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Create category</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Create category{% endblock %}
+{% block content %}
+<div class="panel">
     <h1>Create a category for {{ household.name }}</h1>
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Create category</button>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}

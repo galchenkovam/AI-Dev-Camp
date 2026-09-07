@@ -1,9 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>{{ household.name }} calendar</title></head>
-<body>
+{% extends "base.html" %}
+{% block title %}{{ household.name }} calendar{% endblock %}
+{% block content %}
+<div class="panel stack">
     <h1>{{ selected|date:"F Y" }}</h1>
-    <nav>
+    <nav class="row">
         <a href="{% url 'chore-calendar' household.id %}?year={{ previous.year }}&month={{ previous.month }}">Previous</a>
         <a href="{% url 'chore-calendar' household.id %}?year={{ following.year }}&month={{ following.month }}">Next</a>
     </nav>
@@ -23,5 +23,5 @@
         {% endfor %}
         </tbody>
     </table>
-</body>
-</html>
+</div>
+{% endblock %}

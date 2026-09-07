@@ -1,12 +1,12 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>{% if chore %}Edit{% else %}Create{% endif %} chore</title></head>
-<body>
+{% extends "base.html" %}
+{% block title %}{% if chore %}Edit{% else %}Create{% endif %} chore{% endblock %}
+{% block content %}
+<div class="panel">
     <h1>{% if chore %}Edit{% else %}Create{% endif %} chore</h1>
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit">Save chore</button>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}

@@ -1,11 +1,11 @@
-<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Delete {{ chore.title }}</title></head>
-<body>
+{% extends "base.html" %}
+{% block title %}Delete {{ chore.title }}{% endblock %}
+{% block content %}
+<div class="panel">
     <h1>Delete {{ chore.title }}?</h1>
     <form method="post">
         {% csrf_token %}
         <button type="submit">Delete chore</button>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}

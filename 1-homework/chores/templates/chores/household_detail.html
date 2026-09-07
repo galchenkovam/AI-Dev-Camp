@@ -1,12 +1,13 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>{{ household.name }}</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}{{ household.name }}{% endblock %}
+{% block content %}
+<div class="panel stack">
     <h1>{{ household.name }}</h1>
     <p>Invite link: <a href="{% url 'household-join' household.invite_token %}">{% url 'household-join' household.invite_token %}</a></p>
+    <div class="row">
+        <a href="{% url 'chore-list' household.id %}">View chores</a>
+        <a href="{% url 'chore-calendar' household.id %}">Calendar</a>
+    </div>
     <h2>Members</h2>
     <ul>
         {% for member in household.members.all %}
@@ -20,5 +21,5 @@
         {% endfor %}
     </ul>
     <p><a href="{% url 'category-create' household.id %}">Create a category</a></p>
-</body>
-</html>
+</div>
+{% endblock %}

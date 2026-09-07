@@ -1,14 +1,11 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Join {{ household.name }}</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Join {{ household.name }}{% endblock %}
+{% block content %}
+<div class="panel">
     <h1>Join {{ household.name }}</h1>
     <form method="post">
         {% csrf_token %}
         <button type="submit">Join household</button>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}

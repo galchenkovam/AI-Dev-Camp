@@ -153,6 +153,23 @@ class HouseholdTest(TestCase):
 			chore.full_clean()
 
 
+class ResponsiveUXTest(TestCase):
+	def setUp(self):
+		self.user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+
+	def test_core_pages_include_mobile_viewport_and_feedback_region(self):
+		self.client.force_login(self.user)
+		response = self.client.get(reverse("home"))
+		self.assertContains(response, 'name="viewport"')
+		self.assertContains(response, 'role="status"')
+
+		self.client.logout()
+		for url in (reverse("login"), reverse("register")):
+			response = self.client.get(url)
+			self.assertContains(response, 'name="viewport"')
+			self.assertContains(response, 'role="status"')
+
+
 class ChoreCrudTest(TestCase):
 	def setUp(self):
 		self.user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")

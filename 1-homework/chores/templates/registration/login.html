@@ -1,10 +1,7 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Sign in</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="panel">
     <h1>Sign in</h1>
     <form method="post">
         {% csrf_token %}
@@ -12,5 +9,5 @@
         <button type="submit">Sign in</button>
     </form>
     <p><a href="{% url 'register' %}">Create an account</a></p>
-</body>
-</html>
+</div>
+{% endblock %}
