@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{ household.name }} chores</title></head>
+<body>
+    <h1>{{ household.name }} chores</h1>
+    <form method="get">
+        <label>Status <select name="status"><option value="">Any</option><option value="todo">To do</option><option value="in_progress">In progress</option><option value="done">Done</option></select></label>
+        <label>Category <select name="category"><option value="">Any</option>{% for category in household.categories.all %}<option value="{{ category.id }}">{{ category.name }}</option>{% endfor %}</select></label>
+        <label>Assignee <select name="assigned_to"><option value="">Any</option>{% for member in household.members.all %}<option value="{{ member.user.id }}">{{ member.user.username }}</option>{% endfor %}</select></label>
+        <label>Priority <select name="priority"><option value="">Any</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+        <button type="submit">Filter</button>
+    </form>
+    <p><a href="{% url 'chore-create' household.id %}">Create chore</a></p>
+    <ul>
+        {% for chore in chores %}
+            <li><a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a> - {{ chore.category.name }}, {{ chore.due_date|default:"No due date" }}, {{ chore.get_priority_display }}, {{ chore.assigned_to.username|default:"Unclaimed" }}, {{ chore.get_status_display }}</li>
+        {% empty %}
+            <li>No chores yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

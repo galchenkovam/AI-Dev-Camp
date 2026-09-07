@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{{ household.name }}</title>
+</head>
+<body>
+    <h1>{{ household.name }}</h1>
+    <p>Invite link: <a href="{% url 'household-join' household.invite_token %}">{% url 'household-join' household.invite_token %}</a></p>
+    <h2>Members</h2>
+    <ul>
+        {% for member in household.members.all %}
+            <li>{{ member.user.username }}</li>
+        {% endfor %}
+    </ul>
+    <h2>Categories</h2>
+    <ul>
+        {% for category in household.categories.all %}
+            <li>{{ category.name }}</li>
+        {% endfor %}
+    </ul>
+    <p><a href="{% url 'category-create' household.id %}">Create a category</a></p>
+</body>
+</html>

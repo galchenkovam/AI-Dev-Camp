@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Delete {{ chore.title }}</title></head>
+<body>
+    <h1>Delete {{ chore.title }}?</h1>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Delete chore</button>
+    </form>
+</body>
+</html>

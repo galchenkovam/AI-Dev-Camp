@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{ household.name }} calendar</title></head>
+<body>
+    <h1>{{ selected|date:"F Y" }}</h1>
+    <nav>
+        <a href="{% url 'chore-calendar' household.id %}?year={{ previous.year }}&month={{ previous.month }}">Previous</a>
+        <a href="{% url 'chore-calendar' household.id %}?year={{ following.year }}&month={{ following.month }}">Next</a>
+    </nav>
+    <table>
+        <thead><tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
+        <tbody>
+        {% for week in weeks %}
+            <tr>
+            {% for cell in week %}
+                <td><time datetime="{{ cell.day|date:'Y-m-d' }}">{{ cell.day.day }}</time>
+                    {% for chore in cell.chores %}
+                        <a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a>
+                    {% endfor %}
+                </td>
+            {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

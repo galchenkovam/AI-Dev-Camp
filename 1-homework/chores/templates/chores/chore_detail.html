@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{ chore.title }}</title></head>
+<body>
+    <h1>{{ chore.title }}</h1>
+    <p>{{ chore.description }}</p>
+    <dl>
+        <dt>Category</dt><dd>{{ chore.category.name }}</dd>
+        <dt>Due date</dt><dd>{{ chore.due_date|default:"No due date" }}</dd>
+        <dt>Priority</dt><dd>{{ chore.get_priority_display }}</dd>
+        <dt>Estimated time</dt><dd>{{ chore.estimated_minutes|default:"Not estimated" }} minutes</dd>
+        <dt>Status</dt><dd>{{ chore.get_status_display }}</dd>
+        <dt>Assignee</dt><dd>{{ chore.assigned_to.username|default:"Unclaimed" }}</dd>
+    </dl>
+    <p><a href="{% url 'chore-edit' household.id chore.id %}">Edit</a></p>
+    <form method="post" action="{% url 'chore-delete' household.id chore.id %}">
+        {% csrf_token %}
+        <button type="submit">Delete</button>
+    </form>
+    {% if chore.assignment_mode == "claim" and not chore.assigned_to %}
+        <form method="post" action="{% url 'chore-claim' household.id chore.id %}">
+            {% csrf_token %}
+            <button type="submit">Claim chore</button>
+        </form>
+    {% endif %}
+    {% if not chore.completed_at %}
+        <form method="post" action="{% url 'chore-complete' household.id chore.id %}">
+            {% csrf_token %}
+            <button type="submit">Mark complete</button>
+        </form>
+    {% else %}
+        <p>Completed by {{ chore.completed_by.username }}.</p>
+    {% endif %}
+</body>
+</html>
