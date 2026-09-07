@@ -105,13 +105,13 @@ These tasks are the issue-ready breakdown for the backlog. The PM must groom eac
 ## 10. Build chore calendar view
 **Goal:** Let members see chores laid out by due date.
 
-**Scope:** Build a month-grid calendar, month navigation, due-date placement, and links from calendar entries to chore details.
+**Scope:** Build a month-grid calendar, month navigation, due-date placement, and links from calendar entries to chore details. Keep the layout readable on smaller screens while preserving the month and day navigation flow.
 
 **Acceptance criteria:**
 - Chores appear on the correct due dates.
 - Members can navigate to previous and next months.
 - Calendar entries link to the corresponding chore detail.
-- The view degrades to a usable mobile layout.
+- The view remains usable on mobile layouts without losing navigation or readability.
 
 ## 11. Finalize responsive UX and regression checks
 **Goal:** Make the MVP usable end to end and confirm the main flows work together.

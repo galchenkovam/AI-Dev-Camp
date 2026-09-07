@@ -40,7 +40,7 @@ Description: Build the list view showing all household chores with their categor
 
 ## 10. Build chore calendar view
 Goal: Let members see chores laid out by due date.
-Description: Build a calendar view (month grid) that places chores on their due date, supports navigating between months, and links back to chore details. Ensure it degrades to a usable mobile layout.
+Description: Build a calendar view (month grid) that places chores on their due date, supports navigating between months, and links back to chore details. Keep the experience usable on mobile by preserving clear month navigation and readable day cells.
 
 ## 11. Finalize responsive UX and regression checks
 Goal: Make the MVP usable end to end and confirm the main flows work together.

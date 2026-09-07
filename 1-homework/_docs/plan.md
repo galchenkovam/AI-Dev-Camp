@@ -17,7 +17,7 @@ The app helps household members create, organize, assign, complete, and score sh
 - **Chore details:** Name, description, due date, repeat schedule, category, priority, and estimated time.
 - **Completion:** Record the member who completed the chore and award points.
 - **Reminders:** Support optional chore reminders and automatic reminders before deadlines.
-- **Views:** Provide both list and calendar views.
+- **Views:** Provide both list and calendar views, with the calendar supporting month navigation and clear due-date placement.
 - **Categories:** Include visual category labels. Start with Kitchen, Laundry, Cleaning, and Other; allow members to create custom categories.
 - **Storage:** Use a shared online database so multiple members and devices see the same data.
 - **Platform:** Responsive web app with a mobile-friendly layout.
