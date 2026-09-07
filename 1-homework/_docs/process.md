@@ -6,3 +6,6 @@
 - Commit regularly, especially after a task is completed and verified.
 - Keep each issue small enough to finish in a single session and independent
   enough to hand off to another contributor.
+Roles
+
+- PM - grooms a task before anyone implements it, follows _docs/team/pm.md
