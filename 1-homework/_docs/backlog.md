@@ -44,4 +44,4 @@ Description: Build a calendar view (month grid) that places chores on their due 
 
 ## 11. Finalize responsive UX and regression checks
 Goal: Make the MVP usable end to end and confirm the main flows work together.
-Description: Polish the mobile-friendly layout across all pages, confirm validation and unauthorized-access messaging is clear throughout, and run final regression checks covering registration, household sharing, chore management, all three assignment modes, recurring chores, completion, points, and both views. This task wraps up the project so it is ready for demo and handoff.
+Description: Polish the mobile-friendly layout across all pages, confirm validation and unauthorized-access messaging is clear throughout, and run final regression checks covering registration, household sharing, chore management, all three assignment modes, recurring chores, completion, points, and both list and calendar views. This task wraps up the project so it is ready for demo and handoff.
