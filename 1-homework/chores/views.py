@@ -179,13 +179,16 @@ def chore_complete(request, household_id, chore_id):
 			member.save(update_fields=("points",))
 			next_date = next_due_date(chore.due_date, chore.recurrence)
 			if next_date:
-				Chore.objects.create(
+				next_chore = Chore.objects.create(
 					household=household, category=chore.category, title=chore.title,
 					description=chore.description, due_date=next_date, priority=chore.priority,
 					estimated_minutes=chore.estimated_minutes, recurrence=chore.recurrence,
 					points=chore.points, assignment_mode=chore.assignment_mode,
-					assigned_to=chore.assigned_to, created_by=chore.created_by,
+					assigned_to=chore.assigned_to if chore.assignment_mode in (Chore.AssignmentMode.MANUAL, Chore.AssignmentMode.ROTATION) else None,
+					created_by=chore.created_by,
 				)
+				if next_chore.assignment_mode == Chore.AssignmentMode.ROTATION:
+					next_chore.assign_next_member()
 	return redirect("chore-detail", household_id=household.id, chore_id=chore.id)
 
 

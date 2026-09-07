@@ -386,6 +386,28 @@ class CompletionTest(TestCase):
 
 		self.assertEqual(Chore.objects.filter(title=self.chore.title).count(), 1)
 
+	def test_recurring_claimable_chore_starts_unclaimed(self):
+		self.chore.assignment_mode = Chore.AssignmentMode.CLAIM
+		self.chore.assigned_to = self.user
+		self.chore.save(update_fields=("assignment_mode", "assigned_to"))
+
+		self.client.post(reverse("chore-complete", args=[self.household.id, self.chore.id]))
+
+		next_chore = Chore.objects.get(title=self.chore.title, completed_at__isnull=True)
+		self.assertIsNone(next_chore.assigned_to)
+
+	def test_recurring_rotating_chore_moves_to_next_member(self):
+		other_user = get_user_model().objects.create_user(username="bob", password="A-strong-password-123")
+		HouseholdMember.objects.create(household=self.household, user=other_user)
+		self.chore.assignment_mode = Chore.AssignmentMode.ROTATION
+		self.chore.assigned_to = self.user
+		self.chore.save(update_fields=("assignment_mode", "assigned_to"))
+
+		self.client.post(reverse("chore-complete", args=[self.household.id, self.chore.id]))
+
+		next_chore = Chore.objects.get(title=self.chore.title, completed_at__isnull=True)
+		self.assertEqual(next_chore.assigned_to, other_user)
+
 
 class ChoreFilterTest(TestCase):
 	def setUp(self):
