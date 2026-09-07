@@ -323,6 +323,17 @@ class ChoreCrudTest(TestCase):
 		chore.assign_next_member()
 		self.assertEqual(chore.assigned_to, self.other_user)
 
+	def test_rotation_chore_created_through_form_is_assigned_immediately(self):
+		HouseholdMember.objects.create(household=self.household, user=self.other_user)
+
+		response = self.client.post(
+			reverse("chore-create", args=[self.household.id]),
+			{**self.chore_data("Rotate bins"), "assignment_mode": Chore.AssignmentMode.ROTATION},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(Chore.objects.get(title="Rotate bins").assigned_to, self.user)
+
 
 class SchedulingTest(TestCase):
 	def test_one_time_chore_has_no_next_occurrence(self):

@@ -120,6 +120,8 @@ def chore_create(request, household_id):
 		chore.household = household
 		chore.created_by = request.user
 		chore.save()
+		if chore.assignment_mode == Chore.AssignmentMode.ROTATION:
+			chore.assign_next_member()
 		return redirect("chore-detail", household_id=household.id, chore_id=chore.id)
 	return render(request, "chores/chore_form.html", {"form": form, "household": household})
 
