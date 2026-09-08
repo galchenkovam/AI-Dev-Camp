@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Household account created{% endblock %}
+{% block content %}
+<div class="panel stack">
+    <h1>Account created</h1>
+    <p>{{ username }} can now sign in to {{ household.name }}.</p>
+    <dl>
+        <dt>Username</dt>
+        <dd>{{ username }}</dd>
+        <dt>Temporary password</dt>
+        <dd><strong>{{ password }}</strong></dd>
+    </dl>
+    <p>Share these credentials securely and ask the new member to change the password after signing in.</p>
+    <p><a href="{% url 'household-detail' household.id %}">Back to household</a></p>
+</div>
+{% endblock %}

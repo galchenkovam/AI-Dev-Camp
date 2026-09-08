@@ -3,28 +3,33 @@
 {% block content %}
 <div class="panel stack">
     <h1>{{ selected|date:"F Y" }}</h1>
-    <nav class="row">
-        <a href="{% url 'chore-calendar' household.id %}?year={{ previous.year }}&month={{ previous.month }}">Previous</a>
-        <a href="{% url 'chore-calendar' household.id %}?year={{ following.year }}&month={{ following.month }}">Next</a>
+    <nav class="row" aria-label="Calendar navigation">
+        <a href="{% url 'household-detail' household.id %}">Household home</a>
+        <a href="{% url 'chore-list' household.id %}">Chores</a>
+        <a href="{% url 'chore-calendar' household.id %}?year={{ previous.year }}&month={{ previous.month }}">Previous month</a>
+        <a href="{% url 'chore-calendar' household.id %}?year={{ following.year }}&month={{ following.month }}">Next month</a>
     </nav>
     {% if not chores_by_date %}
         <p class="muted" role="status">No chores are scheduled for this month.</p>
     {% endif %}
-    <table>
-        <thead><tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
-        <tbody>
-        {% for week in weeks %}
-            <tr>
-            {% for cell in week %}
-                <td><time datetime="{{ cell.day|date:'Y-m-d' }}">{{ cell.day.day }}</time>
-                    {% for chore in cell.chores %}
-                        <a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a>
-                    {% endfor %}
-                </td>
+    <div class="calendar-grid" aria-label="{{ selected|date:'F Y' }} calendar">
+            <div class="calendar-weekday">Sun</div>
+            <div class="calendar-weekday">Mon</div>
+            <div class="calendar-weekday">Tue</div>
+            <div class="calendar-weekday">Wed</div>
+            <div class="calendar-weekday">Thu</div>
+            <div class="calendar-weekday">Fri</div>
+            <div class="calendar-weekday">Sat</div>
+            {% for week in weeks %}
+                {% for cell in week %}
+                    <div class="calendar-day{% if not cell.in_month %} calendar-day-outside{% endif %}">
+                        <time datetime="{{ cell.day|date:'Y-m-d' }}">{{ cell.day.day }}</time>
+                        {% for chore in cell.chores %}
+                            <a class="calendar-chore" href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
             {% endfor %}
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    </div>
 </div>
 {% endblock %}

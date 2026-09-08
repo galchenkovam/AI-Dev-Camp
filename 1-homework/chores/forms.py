@@ -11,6 +11,22 @@ class RegistrationForm(UserCreationForm):
         fields = ("username", "password1", "password2")
 
 
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name")
+
+
+class HouseholdUserForm(forms.Form):
+    username = forms.CharField(max_length=150, label="Username")
+
+    def clean_username(self):
+        username = self.cleaned_data["username"]
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError("A user with this username already exists.")
+        return username
+
+
 class HouseholdForm(forms.ModelForm):
     class Meta:
         model = Household

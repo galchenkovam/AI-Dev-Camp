@@ -8,6 +8,8 @@
         {{ form.as_p }}
         <button type="submit">Sign in</button>
     </form>
-    <p><a href="{% url 'register' %}">Create an account</a></p>
+    <div class="row">
+        <a href="{% url 'register' %}">Create an account</a>
+    </div>
 </div>
 {% endblock %}

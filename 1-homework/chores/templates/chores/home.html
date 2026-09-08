@@ -5,10 +5,54 @@
     <h1>Welcome, {{ user.username }}</h1>
     <div class="row">
         <a href="{% url 'household-create' %}">Create a household</a>
+        <a href="{% url 'profile' %}">View profile</a>
     </div>
     <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit">Sign out</button>
     </form>
+</div>
+<div class="stack">
+    <h2>Your households</h2>
+    {% for household in households %}
+        <section class="panel stack">
+            <div class="row">
+                <h3>{{ household.name }}</h3>
+                <a href="{% url 'chore-list' household.id %}">View all chores</a>
+            </div>
+            <div class="dashboard-columns">
+                <div>
+                    <h4>Due or overdue</h4>
+                    <ul>
+                        {% for chore in household.due_chores %}
+                            <li>
+                                <a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a>
+                                <span class="muted">({{ chore.due_date }})</span>
+                            </li>
+                        {% empty %}
+                            <li class="muted">Nothing is due.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div>
+                    <h4>Completed recently</h4>
+                    <ul>
+                        {% for chore in household.recently_completed_chores %}
+                            <li>
+                                <a href="{% url 'chore-detail' household.id chore.id %}">{{ chore.title }}</a>
+                                <span class="muted">by {{ chore.completed_by.username|default:"a household member" }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="muted">No recent completions.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </section>
+    {% empty %}
+        <div class="panel">
+            <p>You are not a member of any household yet.</p>
+        </div>
+    {% endfor %}
 </div>
 {% endblock %}

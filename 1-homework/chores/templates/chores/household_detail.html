@@ -5,10 +5,14 @@
     <h1>{{ household.name }}</h1>
     <p>Invite link: <a href="{% url 'household-join' household.invite_token %}">{% url 'household-join' household.invite_token %}</a></p>
     <div class="row">
+        <a href="{% url 'home' %}">Home</a>
         <a href="{% url 'chore-list' household.id %}">View chores</a>
         <a href="{% url 'chore-calendar' household.id %}">Calendar</a>
     </div>
     <h2>Members</h2>
+    {% if request.user == household.created_by %}
+        <p><a href="{% url 'household-user-create' household.id %}">Create an account for a household member</a></p>
+    {% endif %}
     <ul>
         {% for member in household.members.all %}
             <li>{{ member.user.username }}: {{ member.points }} points</li>

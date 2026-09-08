@@ -5,15 +5,6 @@
     <h1>Create an account</h1>
     <form method="post">
         {% csrf_token %}
-        {% if form.errors %}
-            {{ form.errors.as_text|json_script:"registration-errors" }}
-            <script>
-                const registrationErrors = JSON.parse(
-                    document.getElementById("registration-errors").textContent
-                );
-                window.alert("Please fix these problems:\n\n" + registrationErrors);
-            </script>
-        {% endif %}
         {% if form.non_field_errors %}
             <div class="form-errors" role="alert">
                 {{ form.non_field_errors }}
@@ -33,6 +24,8 @@
         {% endfor %}
         <button type="submit">Register</button>
     </form>
-    <p><a href="{% url 'login' %}">Sign in</a></p>
+    <div class="row">
+        <a href="{% url 'login' %}">Sign in</a>
+    </div>
 </div>
 {% endblock %}

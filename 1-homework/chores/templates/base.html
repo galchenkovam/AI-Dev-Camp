@@ -132,6 +132,12 @@
             gap: 1rem;
         }
 
+        .dashboard-columns {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
         .row {
             display: flex;
             flex-wrap: wrap;
@@ -143,6 +149,43 @@
             width: 100%;
             border-collapse: collapse;
             overflow: hidden;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .calendar-weekday,
+        .calendar-day {
+            min-width: 0;
+            padding: 0.6rem;
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .calendar-weekday {
+            background: #eef4ff;
+            font-weight: 700;
+        }
+
+        .calendar-day {
+            min-height: 7rem;
+            display: grid;
+            align-content: start;
+            gap: 0.35rem;
+        }
+
+        .calendar-day-outside {
+            background: #f8fafc;
+            color: var(--muted);
+        }
+
+        .calendar-chore {
+            display: block;
+            overflow-wrap: anywhere;
         }
 
         th, td {
@@ -173,6 +216,23 @@
                 padding: 0.9rem;
             }
 
+            .dashboard-columns {
+                grid-template-columns: 1fr;
+            }
+
+            .calendar-grid {
+                font-size: 0.85rem;
+            }
+
+            .calendar-weekday,
+            .calendar-day {
+                padding: 0.35rem;
+            }
+
+            .calendar-day {
+                min-height: 6rem;
+            }
+
             table, thead, tbody, tr, th, td {
                 display: block;
                 width: 100%;
@@ -197,6 +257,12 @@
 </head>
 <body>
     <div class="container">
+        {% if user.is_authenticated %}
+            <nav class="row" aria-label="Main navigation">
+                <a href="{% url 'home' %}">Home</a>
+                <a href="{% url 'profile' %}">Profile</a>
+            </nav>
+        {% endif %}
         <div class="messages" role="status" aria-live="polite">
             {% if messages %}
                 {% for message in messages %}

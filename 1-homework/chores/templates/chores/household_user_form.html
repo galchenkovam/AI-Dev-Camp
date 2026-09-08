@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Create household member{% endblock %}
+{% block content %}
+<div class="panel stack">
+    <h1>Create an account for {{ household.name }}</h1>
+    <p>The new member will receive a randomly generated password.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="form-field">
+            {{ form.username.label_tag }}
+            {{ form.username }}
+            {{ form.username.errors }}
+        </div>
+        <button type="submit">Create account</button>
+    </form>
+    <div class="row">
+        <a href="{% url 'household-detail' household.id %}">Household home</a>
+        <a href="{% url 'chore-list' household.id %}">Chores</a>
+        <a href="{% url 'chore-calendar' household.id %}">Calendar</a>
+    </div>
+</div>
+{% endblock %}

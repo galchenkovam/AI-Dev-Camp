@@ -1,11 +1,14 @@
 import uuid
+from datetime import timedelta
+from unittest.mock import patch
 from datetime import date
 
-from django.db import connection
+from django.db import IntegrityError, connection
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import Category, Chore, Household, HouseholdMember
 from .scheduling import next_due_date
@@ -56,7 +59,7 @@ class AuthenticationTest(TestCase):
 		self.assertContains(response, "The two password fields")
 		self.assertFalse(get_user_model().objects.filter(username="alice").exists())
 
-	def test_registration_rejects_missing_required_fields_with_warning_popup(self):
+	def test_registration_rejects_missing_required_fields_with_inline_errors(self):
 		response = self.client.post(
 			reverse("register"),
 			{"username": "", "password1": "", "password2": ""},
@@ -64,8 +67,7 @@ class AuthenticationTest(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, "This field is required.")
-		self.assertContains(response, "window.alert")
-		self.assertContains(response, "Please fix these problems")
+		self.assertNotContains(response, "registration-errors")
 
 	def test_registration_rejects_password_that_breaks_displayed_requirements(self):
 		response = self.client.post(
@@ -75,7 +77,7 @@ class AuthenticationTest(TestCase):
 
 		self.assertEqual(response.status_code, 200)
 		self.assertContains(response, "This password is too short.")
-		self.assertContains(response, "window.alert")
+		self.assertNotContains(response, "registration-errors")
 		self.assertFalse(get_user_model().objects.filter(username="alice").exists())
 
 	def test_user_can_login_stay_authenticated_and_logout(self):
@@ -92,6 +94,87 @@ class AuthenticationTest(TestCase):
 		self.assertRedirects(logout_response, reverse("login"))
 		self.assertRedirects(self.client.get(reverse("home")), f"{reverse('login')}?next={reverse('home')}")
 
+	def test_home_groups_due_and_recent_chores_by_household(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		other_user = get_user_model().objects.create_user(username="bob", password="A-strong-password-123")
+		self.client.force_login(user)
+		household = Household.objects.create(name="Maple House", created_by=user)
+		HouseholdMember.objects.create(household=household, user=user)
+		category = Category.objects.create(household=household, name="Kitchen")
+		other_household = Household.objects.create(name="Hidden House", created_by=other_user)
+		other_category = Category.objects.create(household=other_household, name="Kitchen")
+		now = timezone.now()
+
+		Chore.objects.create(
+			household=household, category=category, title="Wash dishes", created_by=user,
+			due_date=timezone.localdate() - timedelta(days=1),
+		)
+		Chore.objects.create(
+			household=household, category=category, title="Clean counters", created_by=user,
+			due_date=timezone.localdate() + timedelta(days=1),
+		)
+		Chore.objects.create(
+			household=household, category=category, title="Take out trash", created_by=user,
+			status=Chore.Status.DONE, completed_by=user, completed_at=now - timedelta(days=2),
+		)
+		Chore.objects.create(
+			household=household, category=category, title="Old completion", created_by=user,
+			status=Chore.Status.DONE, completed_by=user, completed_at=now - timedelta(days=8),
+		)
+		Chore.objects.create(
+			household=other_household, category=other_category, title="Hidden chore", created_by=other_user,
+			due_date=timezone.localdate(),
+		)
+
+		response = self.client.get(reverse("home"))
+
+		self.assertContains(response, "Maple House")
+		self.assertContains(response, "Wash dishes")
+		self.assertContains(response, "Take out trash")
+		self.assertNotContains(response, "Clean counters")
+		self.assertNotContains(response, "Old completion")
+		self.assertNotContains(response, "Hidden House")
+		self.assertNotContains(response, "Hidden chore")
+
+	def test_user_can_view_and_update_profile(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		first_household = Household.objects.create(name="Maple House", created_by=user)
+		second_household = Household.objects.create(name="Oak House", created_by=user)
+		HouseholdMember.objects.create(household=first_household, user=user, points=12)
+		HouseholdMember.objects.create(household=second_household, user=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("profile"))
+
+		self.assertContains(response, "Maple House")
+		self.assertContains(response, "Oak House")
+		self.assertContains(response, "12 points")
+		response = self.client.post(reverse("profile"), {"username": "alice-new", "first_name": "Alice", "last_name": "Smith"})
+		self.assertRedirects(response, reverse("profile"))
+		user.refresh_from_db()
+		self.assertEqual(user.username, "alice-new")
+		self.assertEqual(user.get_full_name(), "Alice Smith")
+
+	def test_user_can_change_password_and_stay_signed_in(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		self.client.force_login(user)
+
+		response = self.client.post(reverse("password-change"), {
+			"old_password": "A-strong-password-123",
+			"new_password1": "A-new-strong-password-456",
+			"new_password2": "A-new-strong-password-456",
+		})
+
+		self.assertRedirects(response, reverse("profile"))
+		user.refresh_from_db()
+		self.assertTrue(user.check_password("A-new-strong-password-456"))
+		self.assertEqual(self.client.get(reverse("profile")).status_code, 200)
+
+	def test_profile_requires_authentication(self):
+		for name in ("profile", "password-change"):
+			response = self.client.get(reverse(name))
+			self.assertRedirects(response, f"{reverse('login')}?next={reverse(name)}")
+
 
 class HouseholdTest(TestCase):
 	def setUp(self):
@@ -107,6 +190,20 @@ class HouseholdTest(TestCase):
 		self.assertTrue(HouseholdMember.objects.filter(household=household, user=self.user).exists())
 		self.assertEqual(len(str(household.invite_token)), 36)
 		self.assertCountEqual(household.categories.values_list("name", flat=True), ["Kitchen", "Laundry", "Cleaning", "Other"])
+
+	def test_creation_pages_link_back_to_parent_pages(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+		HouseholdMember.objects.create(household=household, user=self.user)
+
+		self.assertContains(self.client.get(reverse("household-create")), reverse("home"))
+		for url in (
+			reverse("category-create", args=[household.id]),
+			reverse("household-user-create", args=[household.id]),
+		):
+			response = self.client.get(url)
+			self.assertContains(response, reverse("household-detail", args=[household.id]))
+			self.assertContains(response, reverse("chore-list", args=[household.id]))
+			self.assertContains(response, reverse("chore-calendar", args=[household.id]))
 
 	def test_anonymous_user_is_redirected_from_household_creation(self):
 		self.client.logout()
@@ -145,6 +242,46 @@ class HouseholdTest(TestCase):
 		response = self.client.get(reverse("household-join", args=[uuid.uuid4()]))
 
 		self.assertEqual(response.status_code, 404)
+
+	def test_household_creator_can_create_member_account_with_generated_password(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+		response = self.client.post(reverse("household-user-create", args=[household.id]), {"username": "new-member"})
+
+		self.assertEqual(response.status_code, 200)
+		new_user = get_user_model().objects.get(username="new-member")
+		self.assertTrue(new_user.check_password(response.context["password"]))
+		self.assertTrue(HouseholdMember.objects.filter(household=household, user=new_user).exists())
+		self.assertContains(response, response.context["password"])
+
+	def test_only_household_creator_can_create_member_account(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+		HouseholdMember.objects.create(household=household, user=self.other_user)
+		self.client.force_login(self.other_user)
+
+		response = self.client.get(reverse("household-user-create", args=[household.id]))
+
+		self.assertEqual(response.status_code, 404)
+
+	def test_existing_username_is_rejected_when_creating_member_account(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+
+		response = self.client.post(reverse("household-user-create", args=[household.id]), {"username": self.other_user.username})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "A user with this username already exists.")
+
+	def test_username_integrity_error_is_returned_as_form_error(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+		created_user = get_user_model().objects.create_user(username="new-member", password="A-strong-password-123")
+
+		with patch("chores.views.User.objects.create_user", side_effect=IntegrityError):
+			response = self.client.post(
+				reverse("household-user-create", args=[household.id]),
+				{"username": created_user.username},
+			)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "A user with this username already exists.")
 
 	def test_member_can_create_custom_category(self):
 		household = Household.objects.create(name="Maple House", created_by=self.user)
@@ -263,6 +400,13 @@ class ChoreCrudTest(TestCase):
 		response = self.client.post(reverse("chore-delete", args=[self.household.id, chore.id]))
 		self.assertRedirects(response, reverse("chore-list", args=[self.household.id]))
 		self.assertFalse(Chore.objects.filter(id=chore.id).exists())
+
+	def test_chore_form_links_back_to_household_pages(self):
+		response = self.client.get(reverse("chore-create", args=[self.household.id]))
+
+		self.assertContains(response, reverse("household-detail", args=[self.household.id]))
+		self.assertContains(response, reverse("chore-list", args=[self.household.id]))
+		self.assertContains(response, reverse("chore-calendar", args=[self.household.id]))
 
 	def test_member_can_assign_chore_to_another_household_member(self):
 		HouseholdMember.objects.create(household=self.household, user=self.other_user)
@@ -482,6 +626,9 @@ class CalendarTest(TestCase):
 
 		self.assertContains(response, "September 2026")
 		self.assertContains(response, reverse("chore-detail", args=[household.id, chore.id]))
+		self.assertContains(response, reverse("household-detail", args=[household.id]))
+		self.assertContains(response, reverse("chore-list", args=[household.id]))
+		self.assertContains(response, 'class="calendar-grid"')
 		self.assertContains(response, "month=10")
 
 	def test_calendar_december_navigation_includes_following_year(self):
@@ -493,6 +640,18 @@ class CalendarTest(TestCase):
 		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 12})
 
 		self.assertEqual(response.context["following"], date(2027, 1, 1))
+		self.assertEqual(response.context["previous"], date(2026, 11, 1))
+
+	def test_calendar_january_navigation_includes_previous_year(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=user)
+		HouseholdMember.objects.create(household=household, user=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 1})
+
+		self.assertEqual(response.context["previous"], date(2025, 12, 1))
+		self.assertEqual(response.context["following"], date(2026, 2, 1))
 
 	def test_calendar_shows_empty_state_when_month_has_no_chores(self):
 		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
@@ -503,6 +662,38 @@ class CalendarTest(TestCase):
 		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 9})
 
 		self.assertContains(response, "No chores are scheduled for this month.")
+
+	def test_calendar_excludes_undated_and_out_of_month_chores(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=user)
+		HouseholdMember.objects.create(household=household, user=user)
+		category = Category.objects.create(household=household, name="Kitchen")
+		Chore.objects.create(household=household, category=category, title="No due date", created_by=user)
+		Chore.objects.create(household=household, category=category, title="October chore", created_by=user, due_date=date(2026, 10, 1))
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": 2026, "month": 9})
+
+		self.assertNotContains(response, "No due date")
+		self.assertNotContains(response, "October chore")
+
+	def test_calendar_invalid_parameters_fall_back_to_current_month(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=user)
+		HouseholdMember.objects.create(household=household, user=user)
+		self.client.force_login(user)
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]), {"year": "not-a-year", "month": 13})
+
+		self.assertEqual(response.context["selected"], date.today().replace(day=1))
+
+	def test_anonymous_user_is_redirected_from_calendar(self):
+		user = get_user_model().objects.create_user(username="alice", password="A-strong-password-123")
+		household = Household.objects.create(name="Maple House", created_by=user)
+
+		response = self.client.get(reverse("chore-calendar", args=[household.id]))
+
+		self.assertRedirects(response, f"{reverse('login')}?next={reverse('chore-calendar', args=[household.id])}")
 
 	def test_non_member_cannot_view_calendar(self):
 		owner = get_user_model().objects.create_user(username="owner", password="A-strong-password-123")

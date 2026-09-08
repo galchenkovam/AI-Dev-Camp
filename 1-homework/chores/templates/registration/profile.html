@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="stack">
+    <section class="panel">
+        <h1>Your profile</h1>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Save profile</button>
+        </form>
+        <p><a href="{% url 'password-change' %}">Change password</a></p>
+    </section>
+
+    <section class="panel">
+        <h2>Households</h2>
+        {% if memberships %}
+            <ul>
+                {% for membership in memberships %}
+                    <li>
+                        <a href="{% url 'household-detail' membership.household.id %}">{{ membership.household.name }}</a>
+                        <span class="muted">{{ membership.points }} points</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">You do not participate in any households yet.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

@@ -36,6 +36,7 @@
         <button type="submit">Filter</button>
     </form>
     <div class="row">
+        <a href="{% url 'household-detail' household.id %}">Household home</a>
         <a href="{% url 'chore-create' household.id %}">Create chore</a>
         <a href="{% url 'chore-calendar' household.id %}">Calendar view</a>
     </div>

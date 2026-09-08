@@ -1,0 +1,10 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "git add": true,
+        "git commit": true,
+        "Push-Location": true,
+        "&": true,
+        "Pop-Location": true,
+        ".\\.venv\\Scripts\\python.exe": true
+    }
+}

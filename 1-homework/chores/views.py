@@ -1,15 +1,20 @@
 import calendar
-from datetime import date
+import secrets
+import string
+from datetime import date, timedelta
 
-from django.contrib.auth import login
+from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 from django.utils import timezone
 from django.http import Http404
 from django.shortcuts import redirect, render
 
-from .forms import CategoryForm, ChoreForm, HouseholdForm, RegistrationForm
+from .forms import CategoryForm, ChoreForm, HouseholdForm, HouseholdUserForm, ProfileForm, RegistrationForm
 from .models import Category, Chore, Household, HouseholdMember, create_default_categories
 from .scheduling import next_due_date
 
@@ -28,7 +33,48 @@ def register(request):
 
 @login_required
 def home(request):
-	return render(request, "chores/home.html")
+	today = timezone.localdate()
+	recent_cutoff = timezone.now() - timedelta(days=7)
+	due_chores = Chore.objects.select_related("category", "assigned_to").filter(
+		completed_at__isnull=True,
+		due_date__isnull=False,
+		due_date__lte=today,
+	).order_by("due_date", "priority", "title")
+	recently_completed = Chore.objects.select_related("category", "completed_by").filter(
+		completed_at__gte=recent_cutoff,
+		completed_at__isnull=False,
+	).order_by("-completed_at", "title")
+	households = Household.objects.filter(
+		members__user=request.user,
+	).prefetch_related(
+		Prefetch("chores", queryset=due_chores, to_attr="due_chores"),
+		Prefetch("chores", queryset=recently_completed, to_attr="recently_completed_chores"),
+	).order_by("name")
+	return render(request, "chores/home.html", {"households": households, "today": today})
+
+
+@login_required
+def profile(request):
+	form = ProfileForm(request.POST or None, instance=request.user)
+	if form.is_valid():
+		form.save()
+		messages.success(request, "Your profile has been updated.")
+		return redirect("profile")
+	return render(request, "registration/profile.html", {
+		"form": form,
+		"memberships": request.user.household_memberships.select_related("household"),
+	})
+
+
+@login_required
+def password_change(request):
+	form = PasswordChangeForm(request.user, request.POST or None)
+	if form.is_valid():
+		form.save()
+		update_session_auth_hash(request, request.user)
+		messages.success(request, "Your password has been changed.")
+		return redirect("profile")
+	return render(request, "registration/password_change.html", {"form": form})
 
 
 @login_required
@@ -51,6 +97,33 @@ def household_detail(request, household_id):
 	if not household.members.filter(user=request.user).exists():
 		raise Http404
 	return render(request, "chores/household_detail.html", {"household": household})
+
+
+@login_required
+def create_household_user(request, household_id):
+	household = Household.objects.get(id=household_id)
+	if household.created_by_id != request.user.id:
+		raise Http404
+
+	form = HouseholdUserForm(request.POST or None)
+	if form.is_valid():
+		password = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+		with transaction.atomic():
+			try:
+				with transaction.atomic():
+					user = User.objects.create_user(username=form.cleaned_data["username"], password=password)
+			except IntegrityError:
+				if User.objects.filter(username=form.cleaned_data["username"]).exists():
+					form.add_error("username", "A user with this username already exists.")
+					return render(request, "chores/household_user_form.html", {"form": form, "household": household})
+				raise
+			HouseholdMember.objects.create(household=household, user=user)
+		return render(request, "chores/household_user_created.html", {
+			"household": household,
+			"username": user.username,
+			"password": password,
+		})
+	return render(request, "chores/household_user_form.html", {"form": form, "household": household})
 
 
 @login_required
@@ -204,9 +277,23 @@ def chore_calendar(request, household_id):
 		selected = date(today.year, today.month, 1)
 	weeks = calendar.Calendar(firstweekday=6).monthdatescalendar(selected.year, selected.month)
 	chores_by_date = {}
-	for chore in household.chores.filter(due_date__year=selected.year, due_date__month=selected.month):
+	for chore in household.chores.filter(
+		due_date__isnull=False,
+		due_date__year=selected.year,
+		due_date__month=selected.month,
+	).select_related("category"):
 		chores_by_date.setdefault(chore.due_date, []).append(chore)
-	weeks = [[{"day": day, "chores": chores_by_date.get(day, [])} for day in week] for week in weeks]
+	weeks = [
+		[
+			{
+				"day": day,
+				"chores": chores_by_date.get(day, []),
+				"in_month": day.month == selected.month,
+			}
+			for day in week
+		]
+		for week in weeks
+	]
 	previous = date(selected.year - (selected.month == 1), 12 if selected.month == 1 else selected.month - 1, 1)
 	following = date(selected.year + (selected.month == 12), 1 if selected.month == 12 else selected.month + 1, 1)
 	return render(request, "chores/chore_calendar.html", {

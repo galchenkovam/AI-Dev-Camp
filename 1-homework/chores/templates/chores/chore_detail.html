@@ -14,8 +14,10 @@
         <dt>Points</dt><dd>{{ chore.points }}</dd>
     </dl>
     <div class="row">
+        <a href="{% url 'household-detail' household.id %}">Household home</a>
         <a href="{% url 'chore-edit' household.id chore.id %}">Edit</a>
         <a href="{% url 'chore-list' household.id %}">Back to list</a>
+        <a href="{% url 'chore-calendar' household.id %}">Calendar</a>
     </div>
     <form method="post" action="{% url 'chore-delete' household.id chore.id %}">
         {% csrf_token %}
