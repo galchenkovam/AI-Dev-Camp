@@ -36,5 +36,5 @@ uv run python manage.py test
 6. Complete a chore and verify the completion record and member score.
 7. Review chores with list filters, then open the calendar and navigate between months.
 
-The regression command completes with 49 passing tests in a clean Django test database. No known failures remain for the MVP workflows.
+The regression command completes with 60 passing tests in a clean Django test database. No known failures remain for the MVP workflows.
 

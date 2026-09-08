@@ -2,7 +2,7 @@
 
 ## Completion Summary
 
-All six homework questions have an answer supported by the project. The Django test suite passes with 49 tests. The application implements the main planned workflows, including authentication, household sharing, chore CRUD, assignments, recurring chores, completion and points, filtering, calendar views, and responsive-page checks. The selected coding agent and repository usage instructions are documented in the root [`README.md`](../README.md).
+All six homework questions have an answer supported by the project. The Django test suite passes with 60 tests. The application implements the main planned workflows, including authentication, household sharing, chore CRUD, assignments, recurring chores, completion and points, filtering, calendar views, and responsive-page checks. The selected coding agent and repository usage instructions are documented in the root [`README.md`](../README.md).
 
 ## Question 1: Select Your Coding Agent
 
@@ -53,4 +53,4 @@ The command uses Django's development server through the project's `manage.py` e
 uv run python manage.py test
 ```
 
-Verification result: 49 tests ran successfully with `OK`.
+Verification result: 60 tests ran successfully with `OK`.
