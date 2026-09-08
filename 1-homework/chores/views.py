@@ -13,6 +13,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from .forms import CategoryForm, ChoreForm, HouseholdForm, HouseholdUserForm, ProfileForm, RegistrationForm
 from .models import Category, Chore, Household, HouseholdMember, create_default_categories
@@ -93,16 +94,15 @@ def create_household(request):
 
 @login_required
 def household_detail(request, household_id):
-	household = Household.objects.get(id=household_id)
-	if not household.members.filter(user=request.user).exists():
-		raise Http404
-	return render(request, "chores/household_detail.html", {"household": household})
+	household = household_for_member(request, household_id)
+	invite_url = request.build_absolute_uri(reverse("household-join", args=[household.invite_token]))
+	return render(request, "chores/household_detail.html", {"household": household, "invite_url": invite_url})
 
 
 @login_required
 def create_household_user(request, household_id):
-	household = Household.objects.get(id=household_id)
-	if household.created_by_id != request.user.id:
+	household = Household.objects.filter(id=household_id, created_by=request.user).first()
+	if household is None:
 		raise Http404
 
 	form = HouseholdUserForm(request.POST or None)
@@ -143,9 +143,7 @@ def join_household(request, invite_token):
 
 @login_required
 def create_category(request, household_id):
-	household = Household.objects.get(id=household_id)
-	if not household.members.filter(user=request.user).exists():
-		raise Http404
+	household = household_for_member(request, household_id)
 
 	form = CategoryForm(request.POST or None)
 	if form.is_valid():
@@ -161,6 +159,13 @@ def household_for_member(request, household_id):
 	if household is None:
 		raise Http404
 	return household
+
+
+def chore_for_household(household, chore_id):
+	chore = household.chores.filter(id=chore_id).first()
+	if chore is None:
+		raise Http404
+	return chore
 
 
 @login_required
@@ -202,17 +207,21 @@ def chore_create(request, household_id):
 @login_required
 def chore_detail(request, household_id, chore_id):
 	household = household_for_member(request, household_id)
-	chore = household.chores.select_related("category").get(id=chore_id)
+	chore = household.chores.select_related("category").filter(id=chore_id).first()
+	if chore is None:
+		raise Http404
 	return render(request, "chores/chore_detail.html", {"household": household, "chore": chore})
 
 
 @login_required
 def chore_edit(request, household_id, chore_id):
 	household = household_for_member(request, household_id)
-	chore = household.chores.get(id=chore_id)
+	chore = chore_for_household(household, chore_id)
 	form = ChoreForm(request.POST or None, instance=chore, household=household)
 	if form.is_valid():
-		form.save()
+		chore = form.save()
+		if chore.assignment_mode == Chore.AssignmentMode.ROTATION and chore.assigned_to_id is None:
+			chore.assign_next_member()
 		return redirect("chore-detail", household_id=household.id, chore_id=chore.id)
 	return render(request, "chores/chore_form.html", {"form": form, "household": household, "chore": chore})
 
@@ -220,7 +229,7 @@ def chore_edit(request, household_id, chore_id):
 @login_required
 def chore_delete(request, household_id, chore_id):
 	household = household_for_member(request, household_id)
-	chore = household.chores.get(id=chore_id)
+	chore = chore_for_household(household, chore_id)
 	if request.method == "POST":
 		chore.delete()
 		return redirect("chore-list", household_id=household.id)
@@ -230,10 +239,13 @@ def chore_delete(request, household_id, chore_id):
 @login_required
 def chore_claim(request, household_id, chore_id):
 	household = household_for_member(request, household_id)
-	chore = household.chores.get(id=chore_id)
-	if request.method == "POST" and chore.assignment_mode == Chore.AssignmentMode.CLAIM and chore.assigned_to_id is None:
-		chore.assigned_to = request.user
-		chore.save(update_fields=("assigned_to",))
+	with transaction.atomic():
+		chore = household.chores.select_for_update().filter(id=chore_id).first()
+		if chore is None:
+			raise Http404
+		if request.method == "POST" and chore.assignment_mode == Chore.AssignmentMode.CLAIM and chore.assigned_to_id is None:
+			chore.assigned_to = request.user
+			chore.save(update_fields=("assigned_to",))
 	return redirect("chore-detail", household_id=household.id, chore_id=chore.id)
 
 
@@ -241,7 +253,9 @@ def chore_claim(request, household_id, chore_id):
 def chore_complete(request, household_id, chore_id):
 	household = household_for_member(request, household_id)
 	with transaction.atomic():
-		chore = household.chores.select_for_update().get(id=chore_id)
+		chore = household.chores.select_for_update().filter(id=chore_id).first()
+		if chore is None:
+			raise Http404
 		if request.method == "POST" and chore.completed_at is None:
 			chore.completed_by = request.user
 			chore.completed_at = timezone.now()

@@ -72,18 +72,17 @@ The MVP should also include the agreed supporting behavior:
 3. The member can see upcoming, overdue, and completed chores.
 4. The member can view each member's accumulated points.
 
-## 5. Suggested Data Model
+## 5. Implemented Data Model
 
 - **User:** id, username, password hash, created date.
 - **Household:** id, name, invite token, created by, created date.
 - **HouseholdMember:** household id, user id, joined date.
 - **Category:** id, household id, name, color, icon.
 - **Chore:** id, household id, title, description, category id, priority, estimated minutes, due date, recurrence, assignment mode, points, status, created by.
-- **ChoreAssignment:** chore id, user id, assignment date, status.
-- **Completion:** chore id, user id, completed date, points awarded.
-- **Reminder:** chore id, user id, reminder time, enabled.
+- Assignment and completion state are stored on **Chore** for this MVP: assignment mode, assigned user, completion user, completion timestamp, status, and points.
+- **Reminder:** not implemented; reminders remain future work.
 
-For recurring chores, store a chore template and create or calculate the current occurrence. Keep the first implementation simple by supporting daily, weekly, and monthly recurrence.
+For recurring chores, the app creates the next **Chore** occurrence when the current one is completed. The first implementation supports daily, weekly, and monthly recurrence.
 
 ## 6. Practical Defaults
 

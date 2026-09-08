@@ -5,7 +5,12 @@
     <h1>{% if chore %}Edit{% else %}Create{% endif %} chore</h1>
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
+        {% if form.non_field_errors %}
+            <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+        {% for field in form %}
+            {% include "includes/form_field.html" %}
+        {% endfor %}
         <button type="submit">Save chore</button>
     </form>
     <div class="row">

@@ -4,6 +4,7 @@ from unittest.mock import patch
 from datetime import date
 
 from django.db import IntegrityError, connection
+from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -24,6 +25,10 @@ class AppConfigTest(TestCase):
 		with connection.cursor() as cursor:
 			cursor.execute("SELECT 1")
 			self.assertEqual(cursor.fetchone()[0], 1)
+
+	def test_email_backend_and_admin_registrations_are_configured(self):
+		for model in (Household, HouseholdMember, Category, Chore):
+			self.assertIn(model, admin.site._registry)
 
 
 class AuthenticationTest(TestCase):
@@ -238,6 +243,14 @@ class HouseholdTest(TestCase):
 
 		self.assertEqual(response.status_code, 404)
 
+	def test_household_detail_shows_absolute_invite_url(self):
+		household = Household.objects.create(name="Maple House", created_by=self.user)
+		HouseholdMember.objects.create(household=household, user=self.user)
+
+		response = self.client.get(reverse("household-detail", args=[household.id]))
+
+		self.assertContains(response, f"http://testserver{reverse('household-join', args=[household.invite_token])}")
+
 	def test_invalid_invite_token_returns_not_found(self):
 		response = self.client.get(reverse("household-join", args=[uuid.uuid4()]))
 
@@ -356,6 +369,8 @@ class ResponsiveUXTest(TestCase):
 			response = self.client.get(url)
 			self.assertContains(response, 'name="viewport"')
 			self.assertContains(response, 'role="status"')
+			self.assertContains(response, ".sr-only")
+			self.assertContains(response, "No messages.")
 
 
 class ChoreCrudTest(TestCase):
@@ -401,6 +416,17 @@ class ChoreCrudTest(TestCase):
 		self.assertRedirects(response, reverse("chore-list", args=[self.household.id]))
 		self.assertFalse(Chore.objects.filter(id=chore.id).exists())
 
+	def test_chore_detail_uses_clear_copy_for_missing_estimate_and_links_confirmation(self):
+		chore = Chore.objects.create(
+			household=self.household, category=self.category, title="Take bins out", created_by=self.user,
+		)
+
+		response = self.client.get(reverse("chore-detail", args=[self.household.id, chore.id]))
+
+		self.assertContains(response, "Not estimated")
+		self.assertNotContains(response, "Not estimated minutes")
+		self.assertContains(response, reverse("chore-delete", args=[self.household.id, chore.id]))
+
 	def test_chore_form_links_back_to_household_pages(self):
 		response = self.client.get(reverse("chore-create", args=[self.household.id]))
 
@@ -418,6 +444,23 @@ class ChoreCrudTest(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertEqual(Chore.objects.get(title="Wash dishes").assigned_to, self.other_user)
+
+	def test_invalid_chore_ids_return_not_found(self):
+		missing_id = uuid.uuid4().int % 1000000
+		for name in ("chore-detail", "chore-edit", "chore-delete", "chore-claim", "chore-complete"):
+			response = self.client.get(reverse(name, args=[self.household.id, missing_id]))
+			self.assertEqual(response.status_code, 404, name)
+
+	def test_get_delete_shows_confirmation_before_deleting(self):
+		chore = Chore.objects.create(
+			household=self.household, category=self.category, title="Take bins out", created_by=self.user,
+		)
+
+		response = self.client.get(reverse("chore-delete", args=[self.household.id, chore.id]))
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "Delete Take bins out?")
+		self.assertTrue(Chore.objects.filter(id=chore.id).exists())
 
 	def test_chore_form_rejects_category_from_another_household(self):
 		other_household = Household.objects.create(name="Other House", created_by=self.other_user)
@@ -500,6 +543,28 @@ class ChoreCrudTest(TestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertEqual(Chore.objects.get(title="Rotate bins").assigned_to, self.user)
+
+	def test_editing_chore_to_rotation_assigns_next_member_once(self):
+		HouseholdMember.objects.create(household=self.household, user=self.other_user)
+		chore = Chore.objects.create(
+			household=self.household, category=self.category, title="Rotate bins", created_by=self.user,
+		)
+
+		response = self.client.post(
+			reverse("chore-edit", args=[self.household.id, chore.id]),
+			{**self.chore_data("Rotate bins"), "assignment_mode": Chore.AssignmentMode.ROTATION},
+		)
+
+		self.assertEqual(response.status_code, 302)
+		chore.refresh_from_db()
+		self.assertEqual(chore.assignment_mode, Chore.AssignmentMode.ROTATION)
+		self.assertEqual(chore.assigned_to, self.user)
+		self.client.post(
+			reverse("chore-edit", args=[self.household.id, chore.id]),
+			{**self.chore_data("Rotate bins"), "assignment_mode": Chore.AssignmentMode.ROTATION},
+		)
+		chore.refresh_from_db()
+		self.assertEqual(chore.assigned_to, self.user)
 
 
 class SchedulingTest(TestCase):

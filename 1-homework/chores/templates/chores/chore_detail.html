@@ -8,7 +8,7 @@
         <dt>Category</dt><dd><span class="category-label" style="--category-color: {{ chore.category.color }}">{% if chore.category.icon %}{{ chore.category.icon }} {% endif %}{{ chore.category.name }}</span></dd>
         <dt>Due date</dt><dd>{{ chore.due_date|default:"No due date" }}</dd>
         <dt>Priority</dt><dd>{{ chore.get_priority_display }}</dd>
-        <dt>Estimated time</dt><dd>{{ chore.estimated_minutes|default:"Not estimated" }} minutes</dd>
+        <dt>Estimated time</dt><dd>{% if chore.estimated_minutes %}{{ chore.estimated_minutes }} minutes{% else %}Not estimated{% endif %}</dd>
         <dt>Status</dt><dd>{{ chore.get_status_display }}</dd>
         <dt>Assignee</dt><dd>{{ chore.assigned_to.username|default:"Unclaimed" }}</dd>
         <dt>Points</dt><dd>{{ chore.points }}</dd>
@@ -19,10 +19,7 @@
         <a href="{% url 'chore-list' household.id %}">Back to list</a>
         <a href="{% url 'chore-calendar' household.id %}">Calendar</a>
     </div>
-    <form method="post" action="{% url 'chore-delete' household.id chore.id %}">
-        {% csrf_token %}
-        <button type="submit" class="secondary">Delete</button>
-    </form>
+    <a href="{% url 'chore-delete' household.id chore.id %}" class="secondary">Delete</a>
     {% if chore.assignment_mode == "claim" and not chore.assigned_to %}
         <form method="post" action="{% url 'chore-claim' household.id chore.id %}">
             {% csrf_token %}
